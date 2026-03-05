@@ -2,6 +2,7 @@ import React, { createContext, useContext, useCallback, useMemo, useState, useEf
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { supabase } from '@/lib/supabase';
 import type { Task, Course, ViewMode, SortOption, FilterStatus } from '@/types/task';
+import { useAuth } from './AuthContext'; // <-- IMPORT useAuth DITAMBAHKAN DI SINI
 
 interface TaskContextType {
   tasks: Task[];
@@ -25,6 +26,8 @@ interface TaskContextType {
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth(); // <-- AMBIL STATUS USER DI SINI
+
   // Data utama menggunakan useState
   const [tasks, setTasks] = useState<Task[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -35,8 +38,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [filterStatus, setFilterStatus] = useLocalStorage<FilterStatus>('filter-status', 'all');
   const [filterCourse, setFilterCourse] = useLocalStorage<string>('filter-course', 'all');
 
-  // Fetch data dari Supabase saat aplikasi dimuat
+  // Fetch data dari Supabase saat aplikasi dimuat atau status login (user) berubah
   useEffect(() => {
+    // KUNCI PERBAIKAN: Jika user belum login atau baru logout, kosongkan data dan hentikan fetch
+    if (!user) {
+      setTasks([]);
+      setCourses([]);
+      return;
+    }
+
     const fetchData = async () => {
       // Ambil data Tasks
       const { data: tasksData, error: tasksError } = await supabase.from('tasks').select('*');
@@ -62,7 +72,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchData();
-  }, []);
+  }, [user]); // <-- KUNCI PERBAIKAN: Tambahkan 'user' ke dalam dependency array
 
   const addTask = useCallback(async (task: Omit<Task, 'id' | 'createdAt'>) => {
     const newId = crypto.randomUUID();

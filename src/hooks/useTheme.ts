@@ -1,27 +1,53 @@
-import { useEffect } from 'react';
-import { useLocalStorage } from './useLocalStorage';
-import type { ThemeColor } from '@/types/task';
+import { useEffect } from "react";
+import { useLocalStorage } from "./useLocalStorage";
+
+// Mendukung semua string id tema warna yang ada di Settings
+export type ColorTheme = "default" | "ocean" | "forest" | "sunset" | "berry" | "midnight" | string;
 
 export function useTheme() {
-  const [theme, setTheme] = useLocalStorage<ThemeColor>('task-tracker-theme', 'default');
-  const [darkMode, setDarkMode] = useLocalStorage<boolean>('task-tracker-dark-mode', false);
+  // 1. State untuk Tema Warna (Color Theme)
+  const [theme, setTheme] = useLocalStorage<ColorTheme>("ui-color-theme", "default");
+  
+  // 2. State untuk Dark Mode (Terang / Gelap)
+  const [darkMode, setDarkMode] = useLocalStorage<boolean>("ui-dark-mode", false);
 
   useEffect(() => {
-    const root = document.documentElement;
+    const root = window.document.documentElement;
+
+    // --- MENGATUR DARK/LIGHT MODE ---
+    if (darkMode) {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    }
+
+    // --- MENGATUR COLOR THEME ---
+    // Daftar class warna yang mungkin ada
+    const themeClasses = [
+      "theme-default", 
+      "theme-ocean", 
+      "theme-forest", 
+      "theme-sunset", 
+      "theme-berry", 
+      "theme-midnight"
+    ];
     
-    // Remove all theme classes
-    root.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset', 'theme-berry', 'theme-midnight', 'dark');
+    // Hapus warna lama sebelum memasang yang baru
+    root.classList.remove(...themeClasses);
     
-    // Add current theme class
-    if (theme !== 'default') {
+    // Pasang class warna yang dipilih user (jika bukan default)
+    if (theme && theme !== "default") {
       root.classList.add(`theme-${theme}`);
     }
-    
-    // Add dark mode class
-    if (darkMode) {
-      root.classList.add('dark');
-    }
-  }, [theme, darkMode]);
 
-  return { theme, setTheme, darkMode, setDarkMode };
+  }, [darkMode, theme]); // Jalankan ulang jika darkMode atau theme diubah
+
+  return { 
+    theme, 
+    setTheme, 
+    darkMode, 
+    setDarkMode 
+  };
 }

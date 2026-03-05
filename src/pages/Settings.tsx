@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Moon, Sun, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Moon, Sun, Plus, Trash2, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default function Settings() {
   const { theme, setTheme, darkMode, setDarkMode } = useTheme();
   const { courses, addCourse, deleteCourse } = useTasks();
   const { notificationsEnabled, requestPermission } = useNotifications();
+  const { signOut } = useAuth();
   const [newCourseName, setNewCourseName] = useState('');
 
   const handleAddCourse = () => {
@@ -199,6 +201,16 @@ export default function Settings() {
             </p>
             <p className="mt-3 text-xs text-muted-foreground">Version 1.0.0</p>
           </div>
+        </section>
+        <section className="pt-4 pb-8">
+          <Button 
+            variant="destructive" 
+            className="w-full sm:w-auto gap-2" 
+            onClick={signOut}
+          >
+            <LogOut className="h-4 w-4" />
+            Log Out
+          </Button>
         </section>
       </main>
     </div>
