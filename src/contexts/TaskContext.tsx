@@ -15,6 +15,7 @@ interface TaskContextType {
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleTaskStatus: (id: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
   addCourse: (course: Omit<Course, 'id'>) => void;
   deleteCourse: (id: string) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -136,17 +137,39 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const toggleTaskStatus = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    
+
     const newStatus = task.status === 'complete' ? 'pending' : 'complete';
-    
+
     const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
 
     if (!error) {
-      setTasks(prev => prev.map(t => 
+      setTasks(prev => prev.map(t =>
         t.id === id ? { ...t, status: newStatus } : t
       ));
     } else {
       console.error('Error toggling task status:', error);
+    }
+  }, [tasks]);
+
+  const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedSubtasks = (task.subtasks ?? []).map(s =>
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+    );
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ subtasks: updatedSubtasks })
+      .eq('id', taskId);
+
+    if (!error) {
+      setTasks(prev => prev.map(t =>
+        t.id === taskId ? { ...t, subtasks: updatedSubtasks } : t
+      ));
+    } else {
+      console.error('Error toggling subtask:', error);
     }
   }, [tasks]);
 
@@ -186,13 +209,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     updateTask,
     deleteTask,
     toggleTaskStatus,
+    toggleSubtask,
     addCourse,
     deleteCourse,
     setViewMode,
     setSortBy,
     setFilterStatus,
     setFilterCourse,
-  }), [tasks, courses, viewMode, sortBy, filterStatus, filterCourse, addTask, updateTask, deleteTask, toggleTaskStatus, addCourse, deleteCourse, setViewMode, setSortBy, setFilterStatus, setFilterCourse]);
+  }), [tasks, courses, viewMode, sortBy, filterStatus, filterCourse, addTask, updateTask, deleteTask, toggleTaskStatus, toggleSubtask, addCourse, deleteCourse, setViewMode, setSortBy, setFilterStatus, setFilterCourse]);
 
   return (
     <TaskContext.Provider value={value}>

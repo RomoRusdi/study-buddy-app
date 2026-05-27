@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -35,7 +36,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useTasks } from '@/contexts/TaskContext';
-import type { Task, Priority } from '@/types/task';
+import type { Task, Priority, Subtask } from '@/types/task';
 import { cn } from '@/lib/utils';
 
 const taskSchema = z.object({
@@ -57,6 +58,10 @@ interface TaskDialogProps {
 export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
   const { addTask, updateTask, courses } = useTasks();
 
+  // State lokal untuk mengelola subtask di dalam dialog
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -77,6 +82,7 @@ export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
         priority: task.priority,
         description: task.description,
       });
+      setSubtasks(task.subtasks ?? []);
     } else {
       form.reset({
         title: '',
@@ -85,12 +91,34 @@ export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
         priority: 'medium',
         description: '',
       });
+      setSubtasks([]);
     }
-  }, [task, form, courses]);
+    setNewSubtaskTitle('');
+  }, [task, form, courses, open]);
+
+  const handleAddSubtask = () => {
+    const trimmed = newSubtaskTitle.trim();
+    if (!trimmed) return;
+    setSubtasks(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), title: trimmed, completed: false },
+    ]);
+    setNewSubtaskTitle('');
+  };
+
+  const handleRemoveSubtask = (id: string) => {
+    setSubtasks(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleToggleSubtask = (id: string) => {
+    setSubtasks(prev =>
+      prev.map(s => (s.id === id ? { ...s, completed: !s.completed } : s))
+    );
+  };
 
   const onSubmit = (values: TaskFormValues) => {
     if (task) {
-      updateTask(task.id, values);
+      updateTask(task.id, { ...values, subtasks });
     } else {
       addTask({
         title: values.title,
@@ -99,6 +127,7 @@ export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
         priority: values.priority,
         description: values.description,
         status: 'pending',
+        subtasks,
       });
     }
     onOpenChange();
@@ -107,7 +136,7 @@ export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display">
             {task ? 'Edit Task' : 'Create New Task'}
@@ -237,6 +266,68 @@ export function TaskDialog({ open, onOpenChange, task }: TaskDialogProps) {
                 </FormItem>
               )}
             />
+
+            {/* Subtask / Checklist Section */}
+            <div className="space-y-3">
+              <FormLabel>Subtasks / Checklist</FormLabel>
+
+              {/* Daftar subtask yang sudah ditambahkan */}
+              {subtasks.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border p-3 bg-muted/30">
+                  {subtasks.map(subtask => (
+                    <div key={subtask.id} className="flex items-center gap-2 group">
+                      <Checkbox
+                        checked={subtask.completed}
+                        onCheckedChange={() => handleToggleSubtask(subtask.id)}
+                        className="h-4 w-4 shrink-0"
+                      />
+                      <span
+                        className={cn(
+                          'flex-1 text-sm',
+                          subtask.completed && 'line-through text-muted-foreground'
+                        )}
+                      >
+                        {subtask.title}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveSubtask(subtask.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input tambah subtask baru */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Tambah sub-tugas..."
+                  value={newSubtaskTitle}
+                  onChange={e => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubtask();
+                    }
+                  }}
+                  className="text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleAddSubtask}
+                  disabled={!newSubtaskTitle.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onOpenChange}>

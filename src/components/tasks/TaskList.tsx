@@ -13,7 +13,7 @@ import {
 import { TaskCard } from './TaskCard';
 import { TaskDialog } from './TaskDialog';
 import { useTasks } from '@/contexts/TaskContext';
-import type { Task, SortOption, FilterStatus } from '@/types/task';
+import type { Task, SortOption, FilterStatus, Priority } from '@/types/task';
 
 export function TaskList() {
   const {
@@ -28,6 +28,7 @@ export function TaskList() {
   } = useTasks();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterPriority, setFilterPriority] = useState<Priority | 'all'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
 
@@ -55,8 +56,19 @@ export function TaskList() {
       result = result.filter(task => task.course === filterCourse);
     }
 
-    // Sort
+    // Filter by priority
+    if (filterPriority !== 'all') {
+      result = result.filter(task => task.priority === filterPriority);
+    }
+
+    // Sort — overdue tasks selalu muncul paling atas
     result.sort((a, b) => {
+      const now = new Date();
+      const aOverdue = new Date(a.dueDate) < now && a.status !== 'complete';
+      const bOverdue = new Date(b.dueDate) < now && b.status !== 'complete';
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+
       switch (sortBy) {
         case 'dueDate':
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -74,7 +86,7 @@ export function TaskList() {
     });
 
     return result;
-  }, [tasks, searchQuery, filterStatus, filterCourse, sortBy]);
+  }, [tasks, searchQuery, filterStatus, filterCourse, filterPriority, sortBy]);
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -109,6 +121,18 @@ export function TaskList() {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="complete">Complete</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterPriority} onValueChange={(v) => setFilterPriority(v as Priority | 'all')}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="high">🔴 High</SelectItem>
+              <SelectItem value="medium">🟡 Medium</SelectItem>
+              <SelectItem value="low">🟢 Low</SelectItem>
             </SelectContent>
           </Select>
 

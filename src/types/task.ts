@@ -2,6 +2,13 @@ export type Priority = 'low' | 'medium' | 'high';
 
 export type TaskStatus = 'pending' | 'complete';
 
+// Tipe untuk sub-item/checklist di dalam sebuah tugas
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -12,6 +19,7 @@ export interface Task {
   status: TaskStatus;
   createdAt: Date;
   tags?: string[];
+  subtasks?: Subtask[]; // Opsional: daftar sub-tugas/checklist
 }
 
 export interface Course {

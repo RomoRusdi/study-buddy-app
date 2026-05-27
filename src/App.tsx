@@ -24,22 +24,27 @@ function ThemeManager() {
 // Komponen menjalankan notifikasi
 function NotificationManager() {
   const { tasks } = useTasks();
-  const { checkUpcomingDeadlines, requestPermission } = useNotifications();
+  const { checkUpcomingDeadlines, requestPermission, notificationsEnabled } = useNotifications();
 
+  // Minta izin notifikasi saat pertama kali dibuka
   useEffect(() => {
     requestPermission();
   }, [requestPermission]);
 
+  // Cek deadline saat tasks berubah ATAU saat notifikasi baru diaktifkan
+  // notificationsEnabled dimasukkan ke deps agar cek diulang setelah izin diberikan
   useEffect(() => {
     if (tasks.length === 0) return;
-    
+
     checkUpcomingDeadlines(tasks);
+
+    // Cek setiap 30 menit (lebih sering dari sebelumnya yang 1 jam)
     const intervalId = setInterval(() => {
       checkUpcomingDeadlines(tasks);
-    }, 60 * 60 * 1000); 
+    }, 30 * 60 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [tasks, checkUpcomingDeadlines]);
+  }, [tasks, checkUpcomingDeadlines, notificationsEnabled]);
 
   return null;
 }
